@@ -2,7 +2,7 @@ name: Daily Inventory Check
 
 on:
   schedule:
-    # 21:00 UTC entspricht 22:00 CET (Berlin)
+    # 21:00 UTC entspricht 22:00 CET
     - cron: '0 21 * * *'
 
 jobs:
@@ -22,7 +22,7 @@ jobs:
 
       - name: Run daily inventory check
         env:
-          SUPABASE_URL:      ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY:      ${{ secrets.SUPABASE_KEY }}
-          FORMSPREE_ENDPOINT:${{ secrets.FORMSPREE_ENDPOINT }}
+          SUPABASE_URL:       ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY:       ${{ secrets.SUPABASE_KEY }}
+          FORMSPREE_ENDPOINT: ${{ secrets.FORMSPREE_ENDPOINT }}
         run: node scripts/checkInventory.js
