@@ -1,6 +1,7 @@
 {
   "name": "fell-manager",
   "version": "1.0.0",
+  "type": "module",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -16,7 +17,6 @@
     "url": "https://github.com/deinmom/Fell-Manager/issues"
   },
   "homepage": "https://github.com/deinmom/Fell-Manager#readme",
-  "description": "",
   "dependencies": {
     "@supabase/supabase-js": "^2.49.4",
     "node-fetch": "^3.3.2"
