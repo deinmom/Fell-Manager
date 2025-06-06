@@ -1,365 +1,235 @@
-<!DOCTYPE html>
-<html lang="de">
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
 <head>
-  <meta charset="UTF-8"/>
-  <title>Fellmanager</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <style>
-    body { margin:0; font-family:sans-serif; background:#f5f5f5; }
-    header { background:#3182ce; color:white; padding:1rem; text-align:center; font-size:1.5rem; position:sticky; top:0; }
-    #toolbar { padding:1rem; display:flex; flex-wrap:wrap; gap:.5rem; background:#fff; justify-content:center; }
-    .btn { padding:1rem; border:none; border-radius:.5rem; cursor:pointer; font-size:1.1rem; min-width:3rem; margin:.25rem; }
-    .btn-home    { background:#718096; color:white; }
-    .btn-admin   { background:#3182ce; color:white; }
-    .btn-logout  { background:#e53e3e; color:white; }
-    .btn-settings{ background:#4c51bf; color:white; }
-    .btn-import  { background:#d69e2e; color:white; }
-    .btn-export  { background:#2f855a; color:white; }
-    .btn-filter  { background:#4a5568; color:white; }
-    .btn-history { background:#805ad5; color:white; }
-    #settingsPanel,#filterPanel,#historyPanel{background:#fff;margin:1rem;padding:1rem;border-radius:.5rem;display:none;}
-    #filterPanel{text-align:center;} #filterPanel .section{margin-top:1rem;text-align:left;font-weight:bold;}
-    #menu,#submenu,#cards{padding:1rem;}
-    .card{background:#fff;border-radius:1rem;padding:1.5rem;margin:.5rem 1rem;box-shadow:0 1px 3px rgba(0,0,0,.1);}
-    .title{font-weight:bold;font-size:1.2rem;margin-bottom:.5rem;} .wiki{font-size:.95rem;color:#555;margin:.5rem 0;}
-    .controls{display:flex;justify-content:center;align-items:center;gap:1rem;margin-top:.75rem;}
-    .controls button{border:none;padding:.8rem 1.2rem;border-radius:.5rem;color:white;cursor:pointer;font-size:1.1rem;min-width:3rem;}
-    .minus{background:#e53e3e;} .plus{background:#38a169;}
-    input.stock-input,input.tol-input{width:5rem;padding:.5rem;font-size:1rem;margin-right:.5rem;border:1px solid #ccc;border-radius:.25rem;}
-    select#historySelect{width:100%;padding:.8rem;font-size:1rem;margin-bottom:.5rem;} #historyList div{padding:.5rem 0;font-size:1rem;}
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <meta http-equiv="Content-Style-Type" content="text/css">
+  <title></title>
+  <meta name="Generator" content="Cocoa HTML Writer">
+  <meta name="CocoaVersion" content="2575.6">
+  <style type="text/css">
+    p.p1 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Helvetica}
+    p.p2 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Helvetica; min-height: 14.0px}
   </style>
 </head>
 <body>
-  <header>Fellmanager</header>
-  <div id="toolbar">
-    <button id="btnHome"     class="btn btn-home">Home</button>
-    <button id="btnAdmin"    class="btn btn-admin">Admin Modus</button>
-    <button id="btnLogout"   class="btn btn-logout"  style="display:none;">Logout</button>
-    <button id="btnSettings" class="btn btn-settings" style="display:none;">Einstellungen</button>
-    <button id="btnImport"   class="btn btn-import"  style="display:none;">Import</button>
-    <button id="btnExport"   class="btn btn-export">Export</button>
-    <button id="btnFilter"   class="btn btn-filter">Filter</button>
-    <button id="btnHistory"  class="btn btn-history">Historie</button>
-    <input type="file" id="fileInput" accept=".csv" style="display:none;"/>
-  </div>
-
-  <div id="settingsPanel">
-    <h2>Einstellungen</h2>
-    <label>Warnschwelle: <input type="number" id="warnschwelle"/></label><br/>
-    <label>Globale Toleranz: <input type="number" id="tolerance"/></label><br/>
-    <label>Warn-Mail an: <input type="email" id="emailTo" style="width:100%;"/></label><br/>
-    <button id="saveSettings" class="btn">Speichern</button> <span id="saveStatus"></span>
-  </div>
-
-  <div id="filterPanel">
-    <h2>Filter</h2>
-    <div class="section">Typ</div><div id="filterTyp"></div>
-    <div class="section">Hersteller</div><div id="filterHersteller"></div>
-    <div class="section">Serie</div><div id="filterSerie"></div>
-    <button id="btnClearFilters" class="btn">Zurücksetzen</button>
-  </div>
-
-  <div id="historyPanel">
-    <h2>Historie</h2>
-    <select id="historySelect"><option value="">– Fell wählen –</option></select>
-    <div id="historyList">Keine Historie.</div>
-  </div>
-
-  <div id="menu"></div>
-  <div id="submenu" style="display:none;"></div>
-  <div id="cards"   style="display:none;"></div>
-
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script>
-  document.addEventListener('DOMContentLoaded', async () => {
-    const SUPABASE_URL = 'https://owrfgjypnemsxonmbrpj.supabase.co';
-    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im93cmZnanlwbmVtc3hvbm1icnBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDczMTUyOTgsImV4cCI6MjA2Mjg5MTI5OH0.X1PymyDZqNe_Plmao8U6gdqFKP70VrFtuZTesgyZMwg';
-    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    const ADMIN = 'Admin';
-
-    const btnHome     = document.getElementById('btnHome'),
-          btnAdmin    = document.getElementById('btnAdmin'),
-          btnLogout   = document.getElementById('btnLogout'),
-          btnSettings = document.getElementById('btnSettings'),
-          btnImport   = document.getElementById('btnImport'),
-          btnExport   = document.getElementById('btnExport'),
-          btnFilter   = document.getElementById('btnFilter'),
-          btnHistory  = document.getElementById('btnHistory'),
-          fileInput   = document.getElementById('fileInput'),
-          setPanel    = document.getElementById('settingsPanel'),
-          filtPanel   = document.getElementById('filterPanel'),
-          histPanel   = document.getElementById('historyPanel'),
-          inpWarn     = document.getElementById('warnschwelle'),
-          inpTol      = document.getElementById('tolerance'),
-          inpMail     = document.getElementById('emailTo'),
-          btnSave     = document.getElementById('saveSettings'),
-          spanStat    = document.getElementById('saveStatus'),
-          filtTyp     = document.getElementById('filterTyp'),
-          filtHerst   = document.getElementById('filterHersteller'),
-          filtSerie   = document.getElementById('filterSerie'),
-          btnClear    = document.getElementById('btnClearFilters'),
-          histSelect  = document.getElementById('historySelect'),
-          histList    = document.getElementById('historyList'),
-          menu        = document.getElementById('menu'),
-          submenu     = document.getElementById('submenu'),
-          cards       = document.getElementById('cards');
-
-    let adminMode=false, allData=[], filters={typ:null,hersteller:null,serie:null}, curMan, curField, curValue;
-
-    async function loadSettings(){
-      const { data } = await sb.from('settings')
-        .select('warnschwelle,tolerance,email_to')
-        .eq('id','global').single();
-      inpWarn.value = data.warnschwelle;
-      inpTol.value  = data.tolerance;
-      inpMail.value = data.email_to;
-    }
-    btnSave.onclick = async ()=>{
-      spanStat.textContent='…';
-      await sb.from('settings').update({
-        warnschwelle: parseInt(inpWarn.value,10),
-        tolerance:    parseInt(inpTol.value,10),
-        email_to:     inpMail.value
-      }).eq('id','global');
-      spanStat.textContent='✔️';
-    };
-
-    async function loadData(){
-      const { data, error, status, statusText } = await sb.from('felle')
-        .select('*').order('hersteller',{ascending:true});
-      if(error){
-        console.error(`(${status} ${statusText})`, error);
-        menu.innerHTML = `<p style="color:red">Fehler beim Laden: ${error.message}</p>`;
-        return;
-      }
-      allData = data;
-    }
-
-    await loadSettings();
-    await loadData();
-
-    btnHome.onclick = ()=>{
-      filters = {typ:null,hersteller:null,serie:null};
-      setPanel.style.display='none';
-      filtPanel.style.display='none';
-      histPanel.style.display='none';
-      submenu.style.display='none';
-      menu.style.display='';
-      cards.style.display='none';
-      btnLogout.style.display   = adminMode?'':'none';
-      btnSettings.style.display = adminMode?'':'none';
-      btnImport.style.display   = adminMode?'':'none';
-      fileInput.style.display   = adminMode?'':'none';
-      renderMenu();
-    };
-
-    btnAdmin.onclick = ()=>{
-      const pw=prompt('Admin-Passwort:');
-      if(pw===ADMIN){
-        adminMode=true;
-        btnLogout.style.display   ='';
-        btnSettings.style.display ='';
-        btnImport.style.display   ='';
-        fileInput.style.display   ='';
-        btnAdmin.style.display    ='none';
-      }
-    };
-    btnLogout.onclick = ()=>{
-      adminMode=false;
-      btnAdmin.style.display    ='';
-      btnLogout.style.display   ='none';
-      btnSettings.style.display ='none';
-      btnImport.style.display   ='none';
-      fileInput.style.display   ='none';
-      setPanel.style.display    ='none';
-      filtPanel.style.display   ='none';
-      histPanel.style.display   ='none';
-      submenu.style.display     ='none';
-      menu.style.display        ='';
-      cards.style.display       ='none';
-      filters = {typ:null,hersteller:null,serie:null};
-    };
-
-    btnSettings.onclick = ()=> setPanel.style.display = setPanel.style.display==='block'?'none':'block';
-
-    btnImport.onclick = ()=> fileInput.click();
-    fileInput.onchange = async ()=>{
-      const text  = await fileInput.files[0].text();
-      const lines = text.split(/\r?\n/).filter(l=>l.trim());
-      const sep   = lines[0].includes(';')?';':',';
-      const [hdr,...rows] = lines.map(l=>l.split(sep).map(c=>c.trim()));
-      const idx = {
-        id: hdr.indexOf('id'),
-        her: hdr.indexOf('hersteller'),
-        ser: hdr.indexOf('serie'),
-        gro: hdr.indexOf('groesse'),
-        be: hdr.indexOf('bestand'),
-        wi: hdr.indexOf('wiki'),
-        a:  hdr.indexOf('typ_a'),
-        b:  hdr.indexOf('typ_b')
-      };
-      if([idx.id,idx.her,idx.ser,idx.gro,idx.be].some(i=>i<0)) {
-        return alert('CSV braucht id, hersteller, serie, groesse, bestand.');
-      }
-      const map = {};
-      rows.forEach(cols=>{
-        const idVal = cols[idx.id], best = parseInt(cols[idx.be],10);
-        if(!idVal||isNaN(best)) return;
-        map[idVal] = {
-          id: idVal,
-          hersteller: cols[idx.her],
-          serie:      cols[idx.ser],
-          groesse:    cols[idx.gro],
-          bestand:    best,
-          ...(idx.wi>=0?{wiki:cols[idx.wi]}:{}),
-          ...(idx.a>=0?{typ_a:cols[idx.a]}:{}),
-          ...(idx.b>=0?{typ_b:cols[idx.b]}:{})
-        };
-      });
-      const up = Object.values(map);
-      const { error } = await sb.from('felle').upsert(up,{onConflict:'id'});
-      if(error){
-        console.error('Import-Fehler:',error);
-        return alert('Import-Fehler: '+error.message);
-      }
-      await loadData();
-      renderMenu();
-      alert('Import abgeschlossen: '+up.length+' Datensätze.');
-    };
-
-    btnExport.onclick = ()=>{
-      if(!allData.length) return alert('Keine Daten.');
-      const date=new Date().toISOString().split('T')[0],
-            fn=`Fellbestand_${date}.csv`,
-            sep=';', keys=Object.keys(allData[0]);
-      let csv=keys.join(sep)+'\n';
-      allData.forEach(f=>csv+=keys.map(k=>f[k]==null?'':String(f[k]).replace(/"/g,'""')).join(sep)+'\n');
-      const blob=new Blob([csv],{type:'text/csv'}),
-            url=(window.URL||window.webkitURL).createObjectURL(blob),
-            a=document.createElement('a');
-      a.href=url; a.download=fn; document.body.append(a); a.click(); a.remove();
-      (window.URL||window.webkitURL).revokeObjectURL(url);
-    };
-
-    btnFilter.onclick = ()=>{ filtPanel.style.display=filtPanel.style.display==='block'?'none':'block'; buildFilters(); };
-    btnClear.onclick  = ()=>{ filters={typ:null,hersteller:null,serie:null}; buildFilters(); renderMenu(); };
-    function buildFilters(){
-      [['typ',filtTyp,['typ_a','typ_b']],
-       ['hersteller',filtHerst,['hersteller']],
-       ['serie',filtSerie,['serie']]]
-      .forEach(([key,cont,fields])=>{
-        cont.innerHTML='';
-        const vals=Array.from(new Set(
-          allData.filter(f=>!filters.hersteller||f.hersteller===filters.hersteller)
-                 .flatMap(f=>fields.flatMap(fld=>Array.isArray(f[fld])?f[fld]:[f[fld]]))
-                 .filter(Boolean)
-        )).sort();
-        vals.forEach(v=>{
-          const b=document.createElement('button');
-          b.textContent=v; b.className='btn';
-          if(filters[key]===v) b.classList.add('btn-admin');
-          b.onclick=()=>{
-            filters[key]=filters[key]===v?null:v;
-            buildFilters(); renderMenu();
-          };
-          cont.appendChild(b);
-        });
-      });
-    }
-
-    btnHistory.onclick = ()=>{
-      const show=histPanel.style.display!=='block';
-      histPanel.style.display=show?'block':'none';
-      if(show){
-        histList.textContent='Lade…';
-        histSelect.innerHTML='<option></option>';
-        allData.forEach(f=>histSelect.add(new Option(`${f.hersteller}–${f.serie} ${f.groesse}`,f.id)));
-      }
-    };
-    histSelect.onchange = async ()=>{
-      const idv=histSelect.value;
-      if(!idv) return histList.textContent='Keine Historie.';
-      const { data } = await sb.from('history').select('delta,timestamp').eq('fell_id',idv).order('timestamp',{ascending:false});
-      histList.innerHTML=data.map(h=>`<div>${new Date(h.timestamp).toLocaleString()}: ${h.delta>0?'+':''}${h.delta}</div>`).join('')||'Keine Einträge.';
-    };
-
-    function renderMenu(){
-      menu.innerHTML='<h2>Hersteller wählen</h2>';
-      submenu.style.display='none'; cards.style.display='none';
-      buildFilters();
-      Array.from(new Set(allData.map(f=>f.hersteller)))
-        .filter(h=>!filters.hersteller||h===filters.hersteller)
-        .sort()
-        .forEach(m=>{
-          const b=document.createElement('button');
-          b.textContent=m; b.className='btn'; b.onclick=()=>showSub(m);
-          menu.appendChild(b);
-        });
-    }
-    function showSub(man){
-      curMan=man; menu.style.display='none'; submenu.style.display=''; cards.style.display='none';
-      submenu.innerHTML =
-        '<button class="btn btn-logout">← Zurück</button><br/>' +
-        '<button class="btn" id="bSer">Nach Serie</button>' +
-        '<button class="btn" id="bTyp" style="margin-left:.5rem">Nach Typ</button>';
-      document.getElementById('bSer').onclick=()=>showList('serie');
-      document.getElementById('bTyp').onclick=()=>showList('typ');
-      document.querySelector('#submenu .btn-logout').onclick = () => {
-        filters.hersteller = null;
-        renderMenu();
-      };
-    }
-    function showList(field){
-      curField=field; submenu.style.display='none'; cards.style.display=''; cards.innerHTML='';
-      const back=document.createElement('button');
-      back.textContent='← Zurück'; back.className='btn btn-logout';
-      back.onclick=()=>showSub(curMan);
-      cards.appendChild(back);
-      const vals=Array.from(new Set(
-        allData.filter(f=>f.hersteller===curMan)
-               .flatMap(f=>field==='serie'?[f.serie]:[f.typ_a,f.typ_b].filter(Boolean))
-      )).sort();
-      vals.forEach(v=>{
-        const b=document.createElement('button');
-        b.textContent=v; b.className='btn'; b.onclick=()=>renderCards(field,v);
-        cards.appendChild(b);
-      });
-    }
-    function renderCards(field,val){
-      curValue=val; cards.innerHTML='';
-      const back=document.createElement('button');
-      back.textContent='← Zurück'; back.className='btn btn-logout';
-      back.onclick=()=>showList(field);
-      cards.appendChild(back);
-      allData.filter(f=>f.hersteller===curMan)
-             .filter(f=>field==='serie'?f.serie===val:[f.typ_a,f.typ_b].includes(val))
-             .forEach(f=>{
-        const c=document.createElement('div'); c.className='card';
-        c.innerHTML=`
-          <div class="title">${f.serie} ${f.groesse}</div>
-          <div class="wiki">${f.wiki||''}</div>
-          <div class="controls">
-            ${adminMode
-              ? `<input class="stock-input" type="number" value="${f.bestand}" onchange="updateLog('${f.id}',parseInt(this.value,10)-${f.bestand})">`
-              : `<div>Bestand: <strong>${f.bestand}</strong></div>`
-            }
-            <button class="minus" onclick="updateLog('${f.id}',-1)">-1</button>
-            <button class="plus"  onclick="updateLog('${f.id}',+1)">+1</button>`
-        + `</div>`;
-        cards.appendChild(c);
-      });
-    }
-    window.updateLog=async(id,delta)=>{
-      if(!delta) return;
-      const f=allData.find(x=>x.id===id), neu=f.bestand+delta;
-      await sb.from('felle').update({bestand:neu}).eq('id',id);
-      await sb.from('history').insert({fell_id:id,delta});
-      f.bestand=neu;
-      if(curField&&curValue) renderCards(curField,curValue);
-      else renderMenu();
-    };
-    renderMenu();
-  });
-  </script>
+<p class="p1">&lt;!DOCTYPE html&gt;</p>
+<p class="p1">&lt;html lang="de"&gt;</p>
+<p class="p1">&lt;head&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;meta charset="UTF-8" /&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;title&gt;Fellmanager&lt;/title&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;meta name="viewport" content="width=device-width, initial-scale=1" /&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;style&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>body { max-width: 700px; margin: 2rem auto; font-family: sans-serif; }</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.card { border: 1px solid #ccc; border-radius: 1rem; padding: 1rem; margin-bottom: 1rem; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.header { font-size: 24px; font-weight: bold; text-align: center; margin-bottom: 1rem; }</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.title { font-size: 18px; font-weight: bold; }</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.wiki<span class="Apple-converted-space">  </span>{ font-size: 14px; color: #555; margin: .5rem 0; }</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.controls { display: flex; justify-content: space-between; align-items: center; }</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.controls button { border: none; color: white; padding: .5rem 1rem; border-radius: 5px; cursor: pointer; font-size: 1rem; }</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.minus { background: #e53e3e; margin-right: .5rem; }</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.plus<span class="Apple-converted-space">  </span>{ background: #38a169; }</p>
+<p class="p1"><span class="Apple-converted-space">    </span>/* Admin-Menü */</p>
+<p class="p1"><span class="Apple-converted-space">    </span>#adminMenu { margin-top: 1rem; }</p>
+<p class="p1"><span class="Apple-converted-space">    </span>#adminMenu button { margin-right: .5rem; padding: .5rem 1rem; font-size: 1rem; }</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;/style&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;!-- Supabase-JS via CDN --&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"&gt;&lt;/script&gt;</p>
+<p class="p1">&lt;/head&gt;</p>
+<p class="p1">&lt;body&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;div class="header"&gt;Fellmanager&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;!-- Container für die Kartenliste --&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;div id="container"&gt;Lade Daten...&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;!-- Admin-Menü (nur im Admin-Modus sichtbar) --&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;div id="adminMenu" style="display:none;"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;button id="btnExportCSV"&gt;Export als CSV&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;input type="file" id="fileInput" accept=".csv" style="display:none;"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;button id="btnImportCSV"&gt;Import CSV&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;script&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>// 1) Supabase-Zugangsdaten</p>
+<p class="p1"><span class="Apple-converted-space">    </span>const SUPABASE_URL <span class="Apple-converted-space">    </span>= "https://owrfgjypnemsxonmbrpj.supabase.co";</p>
+<p class="p1"><span class="Apple-converted-space">    </span>const SUPABASE_ANON_KEY = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im93cmZnanlwbmVtc3hvbm1icnBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDczMTUyOTgsImV4cCI6MjA2Mjg5MTI5OH0.X1PymyDZqNe_Plmao8U6gdqFKP70VrFtuZTesgyZMwg"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpZVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im93cmZnanlwbmVtc3hvbmJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDczMTUyOTgsImV4cCI6MjA2Mjg5MTI5OH0.X1PymyDZqNe_Plmao8U6gdqFKP70VrFtuZTesgyZMwg";</p>
+<p class="p1"><span class="Apple-converted-space">    </span>const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>const container = document.getElementById("container");</p>
+<p class="p1"><span class="Apple-converted-space">    </span>const adminMenu = document.getElementById("adminMenu");</p>
+<p class="p1"><span class="Apple-converted-space">    </span>const btnExportCSV = document.getElementById("btnExportCSV");</p>
+<p class="p1"><span class="Apple-converted-space">    </span>const btnImportCSV = document.getElementById("btnImportCSV");</p>
+<p class="p1"><span class="Apple-converted-space">    </span>const fileInput = document.getElementById("fileInput");</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>let allData = [];</p>
+<p class="p1"><span class="Apple-converted-space">    </span>let isAdmin = false;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>// 2) Daten laden, sortieren und anzeigen</p>
+<p class="p1"><span class="Apple-converted-space">    </span>async function loadFelle() {</p>
+<p class="p1"><span class="Apple-converted-space">      </span>const { data, error } = await supabase</p>
+<p class="p1"><span class="Apple-converted-space">        </span>.from("felle")</p>
+<p class="p1"><span class="Apple-converted-space">        </span>.select("*");</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">      </span>if (error) {</p>
+<p class="p1"><span class="Apple-converted-space">        </span>console.error(error);</p>
+<p class="p1"><span class="Apple-converted-space">        </span>container.innerHTML = "&lt;p style='color:red'&gt;Fehler beim Laden der Daten.&lt;/p&gt;";</p>
+<p class="p1"><span class="Apple-converted-space">        </span>return;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">      </span>// Sortierung: Hersteller → Serie → numerisch nach Größe</p>
+<p class="p1"><span class="Apple-converted-space">      </span>allData = data.sort((a, b) =&gt; {</p>
+<p class="p1"><span class="Apple-converted-space">        </span>// 1) Hersteller alphabetisch</p>
+<p class="p1"><span class="Apple-converted-space">        </span>const hCmp = a.hersteller.localeCompare(b.hersteller);</p>
+<p class="p1"><span class="Apple-converted-space">        </span>if (hCmp !== 0) return hCmp;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>// 2) Serie alphabetisch</p>
+<p class="p1"><span class="Apple-converted-space">        </span>const sCmp = (a.serie || "").localeCompare(b.serie || "");</p>
+<p class="p1"><span class="Apple-converted-space">        </span>if (sCmp !== 0) return sCmp;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>// 3) Größe numerisch (z.B. "14")</p>
+<p class="p1"><span class="Apple-converted-space">        </span>const sizeA = parseInt((a.groesse || "").replace(/[^0-9]/g, ""), 10) || 0;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>const sizeB = parseInt((b.groesse || "").replace(/[^0-9]/g, ""), 10) || 0;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>return sizeA - sizeB;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>});</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">      </span>renderFelle(allData);</p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>// 3) Karten anzeigen</p>
+<p class="p1"><span class="Apple-converted-space">    </span>function renderFelle(dataArray) {</p>
+<p class="p1"><span class="Apple-converted-space">      </span>container.innerHTML = "";</p>
+<p class="p1"><span class="Apple-converted-space">      </span>dataArray.forEach(fell =&gt; {</p>
+<p class="p1"><span class="Apple-converted-space">        </span>const card = document.createElement("div");</p>
+<p class="p1"><span class="Apple-converted-space">        </span>card.className = "card";</p>
+<p class="p1"><span class="Apple-converted-space">        </span>card.innerHTML = `</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;div class="title"&gt;${fell.id} – ${fell.hersteller} ${fell.serie} ${fell.groesse}&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;div class="wiki"&gt;${fell.wiki}&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;div class="controls"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;div&gt;Bestand: &lt;strong&gt;${fell.bestand}&lt;/strong&gt;&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;button class="minus"&gt;-1&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;button class="plus"&gt;+1&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;/div&gt;`;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>// Button-Handler</p>
+<p class="p1"><span class="Apple-converted-space">        </span>card.querySelector(".minus").onclick = () =&gt; updateBestand(fell.id, -1);</p>
+<p class="p1"><span class="Apple-converted-space">        </span>card.querySelector(".plus").onclick<span class="Apple-converted-space">  </span>= () =&gt; updateBestand(fell.id, +1);</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>container.append(card);</p>
+<p class="p1"><span class="Apple-converted-space">      </span>});</p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>// 4) Bestand aktualisieren</p>
+<p class="p1"><span class="Apple-converted-space">    </span>async function updateBestand(id, delta) {</p>
+<p class="p1"><span class="Apple-converted-space">      </span>const { error } = await supabase</p>
+<p class="p1"><span class="Apple-converted-space">        </span>.from("felle")</p>
+<p class="p1"><span class="Apple-converted-space">        </span>.update({ bestand: supabase.raw("bestand + ?", [delta]) })</p>
+<p class="p1"><span class="Apple-converted-space">        </span>.eq("id", id);</p>
+<p class="p1"><span class="Apple-converted-space">      </span>if (error) {</p>
+<p class="p1"><span class="Apple-converted-space">        </span>console.error("Update-Fehler:", error);</p>
+<p class="p1"><span class="Apple-converted-space">        </span>return;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>}</p>
+<p class="p1"><span class="Apple-converted-space">      </span>await loadFelle();</p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>// 5) Export als CSV (alphabetisch nach id, plus Datum+Uhrzeit im Dateinamen)</p>
+<p class="p1"><span class="Apple-converted-space">    </span>function exportAsCSV() {</p>
+<p class="p1"><span class="Apple-converted-space">      </span>if (!allData.length) return;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">      </span>// Kopie und Sortierung nach id (alphabetisch)</p>
+<p class="p1"><span class="Apple-converted-space">      </span>const rows = [...allData].sort((a, b) =&gt; a.id.localeCompare(b.id));</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">      </span>// CSV-Header</p>
+<p class="p1"><span class="Apple-converted-space">      </span>const header = ["id", "hersteller", "serie", "groesse", "bestand", "warnschwelle", "wiki", "typ_a", "typ_b"];</p>
+<p class="p1"><span class="Apple-converted-space">      </span>const csvRows = [header.join(",")];</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">      </span>// Datenzeilen bauen</p>
+<p class="p1"><span class="Apple-converted-space">      </span>rows.forEach(f =&gt; {</p>
+<p class="p1"><span class="Apple-converted-space">        </span>const values = [</p>
+<p class="p1"><span class="Apple-converted-space">          </span>f.id,</p>
+<p class="p1"><span class="Apple-converted-space">          </span>f.hersteller,</p>
+<p class="p1"><span class="Apple-converted-space">          </span>f.serie,</p>
+<p class="p1"><span class="Apple-converted-space">          </span>f.groesse,</p>
+<p class="p1"><span class="Apple-converted-space">          </span>f.bestand,</p>
+<p class="p1"><span class="Apple-converted-space">          </span>f.warnschwelle,</p>
+<p class="p1"><span class="Apple-converted-space">          </span>`"${f.wiki.replace(/"/g, '""')}"`,</p>
+<p class="p1"><span class="Apple-converted-space">          </span>f.typ_a,</p>
+<p class="p1"><span class="Apple-converted-space">          </span>f.typ_b</p>
+<p class="p1"><span class="Apple-converted-space">        </span>];</p>
+<p class="p1"><span class="Apple-converted-space">        </span>csvRows.push(values.join(","));</p>
+<p class="p1"><span class="Apple-converted-space">      </span>});</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">      </span>const csvString = csvRows.join("\n");</p>
+<p class="p1"><span class="Apple-converted-space">      </span>const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });</p>
+<p class="p1"><span class="Apple-converted-space">      </span>const url = URL.createObjectURL(blob);</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">      </span>// Aktuelles Datum und Uhrzeit</p>
+<p class="p1"><span class="Apple-converted-space">      </span>const now = new Date();</p>
+<p class="p1"><span class="Apple-converted-space">      </span>const dd = String(now.getDate()).padStart(2, '0');</p>
+<p class="p1"><span class="Apple-converted-space">      </span>const mm = String(now.getMonth() + 1).padStart(2, '0');</p>
+<p class="p1"><span class="Apple-converted-space">      </span>const yy = now.getFullYear();</p>
+<p class="p1"><span class="Apple-converted-space">      </span>const hh = String(now.getHours()).padStart(2, '0');</p>
+<p class="p1"><span class="Apple-converted-space">      </span>const min = String(now.getMinutes()).padStart(2, '0');</p>
+<p class="p1"><span class="Apple-converted-space">      </span>const filename = `Fellbestand_${dd}.${mm}.${yy}_${hh}-${min}.csv`;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">      </span>// Download-Link erzeugen</p>
+<p class="p1"><span class="Apple-converted-space">      </span>const link = document.createElement("a");</p>
+<p class="p1"><span class="Apple-converted-space">      </span>link.setAttribute("href", url);</p>
+<p class="p1"><span class="Apple-converted-space">      </span>link.setAttribute("download", filename);</p>
+<p class="p1"><span class="Apple-converted-space">      </span>document.body.appendChild(link);</p>
+<p class="p1"><span class="Apple-converted-space">      </span>link.click();</p>
+<p class="p1"><span class="Apple-converted-space">      </span>document.body.removeChild(link);</p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>// 6) CSV-Import</p>
+<p class="p1"><span class="Apple-converted-space">    </span>function handleFileImport(event) {</p>
+<p class="p1"><span class="Apple-converted-space">      </span>const file = event.target.files[0];</p>
+<p class="p1"><span class="Apple-converted-space">      </span>if (!file) return;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">      </span>const reader = new FileReader();</p>
+<p class="p1"><span class="Apple-converted-space">      </span>reader.onload = async function(e) {</p>
+<p class="p1"><span class="Apple-converted-space">        </span>const text = e.target.result;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>const lines = text.split(/\r?\n/).filter(l =&gt; l.trim());</p>
+<p class="p1"><span class="Apple-converted-space">        </span>const header = lines.shift().split(",");</p>
+<p class="p1"><span class="Apple-converted-space">        </span>const idIdx = header.indexOf("id");</p>
+<p class="p1"><span class="Apple-converted-space">        </span>const bestandIdx = header.indexOf("bestand");</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>for (let line of lines) {</p>
+<p class="p1"><span class="Apple-converted-space">          </span>const cols = line.split(",");</p>
+<p class="p1"><span class="Apple-converted-space">          </span>const id = cols[idIdx];</p>
+<p class="p1"><span class="Apple-converted-space">          </span>const bestand = parseInt(cols[bestandIdx], 10);</p>
+<p class="p1"><span class="Apple-converted-space">          </span>if (!id) continue;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>await supabase</p>
+<p class="p1"><span class="Apple-converted-space">            </span>.from("felle")</p>
+<p class="p1"><span class="Apple-converted-space">            </span>.update({ bestand })</p>
+<p class="p1"><span class="Apple-converted-space">            </span>.eq("id", id);</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p1"><span class="Apple-converted-space">        </span>await loadFelle();</p>
+<p class="p1"><span class="Apple-converted-space">      </span>};</p>
+<p class="p1"><span class="Apple-converted-space">      </span>reader.readAsText(file);</p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>// 7) Admin-Modus umschalten</p>
+<p class="p1"><span class="Apple-converted-space">    </span>function toggleAdmin() {</p>
+<p class="p1"><span class="Apple-converted-space">      </span>isAdmin = !isAdmin;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>adminMenu.style.display = isAdmin ? "block" : "none";</p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>// Eventlistener</p>
+<p class="p1"><span class="Apple-converted-space">    </span>btnExportCSV.onclick = exportAsCSV;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>btnImportCSV.onclick = () =&gt; fileInput.click();</p>
+<p class="p1"><span class="Apple-converted-space">    </span>fileInput.onchange = handleFileImport;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>// Initial aufrufen</p>
+<p class="p1"><span class="Apple-converted-space">    </span>loadFelle();</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>// Admin-Modus per "Ctrl+M" umschalten</p>
+<p class="p1"><span class="Apple-converted-space">    </span>document.addEventListener("keydown", e =&gt; {</p>
+<p class="p1"><span class="Apple-converted-space">      </span>if (e.ctrlKey &amp;&amp; e.key === "m") {</p>
+<p class="p1"><span class="Apple-converted-space">        </span>toggleAdmin();</p>
+<p class="p1"><span class="Apple-converted-space">      </span>}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>});</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;/script&gt;</p>
+<p class="p1">&lt;/body&gt;</p>
+<p class="p1">&lt;/html&gt;</p>
 </body>
 </html>
