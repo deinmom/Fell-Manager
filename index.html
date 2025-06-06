@@ -28,12 +28,13 @@
 <p class="p1"><span class="Apple-converted-space">    </span>.controls button { border: none; color: white; padding: .5rem 1rem; border-radius: 5px; cursor: pointer; font-size: 1rem; }</p>
 <p class="p1"><span class="Apple-converted-space">    </span>.minus { background: #e53e3e; margin-right: .5rem; }</p>
 <p class="p1"><span class="Apple-converted-space">    </span>.plus<span class="Apple-converted-space">  </span>{ background: #38a169; }</p>
+<p class="p2"><br></p>
 <p class="p1"><span class="Apple-converted-space">    </span>/* Admin-Menü */</p>
 <p class="p1"><span class="Apple-converted-space">    </span>#adminMenu { margin-top: 1rem; }</p>
 <p class="p1"><span class="Apple-converted-space">    </span>#adminMenu button { margin-right: .5rem; padding: .5rem 1rem; font-size: 1rem; }</p>
 <p class="p1"><span class="Apple-converted-space">  </span>&lt;/style&gt;</p>
-<p class="p1"><span class="Apple-converted-space">  </span>&lt;!-- Supabase-JS via CDN --&gt;</p>
-<p class="p1"><span class="Apple-converted-space">  </span>&lt;script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"&gt;&lt;/script&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;!-- Supabase-JS via CDN (richtiger UMD-Build mit korrektem MIME-Typ) --&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/index.js"&gt;&lt;/script&gt;</p>
 <p class="p1">&lt;/head&gt;</p>
 <p class="p1">&lt;body&gt;</p>
 <p class="p2"><br></p>
@@ -50,10 +51,11 @@
 <p class="p1"><span class="Apple-converted-space">  </span>&lt;/div&gt;</p>
 <p class="p2"><br></p>
 <p class="p1"><span class="Apple-converted-space">  </span>&lt;script&gt;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>// 1) Supabase-Zugangsdaten</p>
+<p class="p1"><span class="Apple-converted-space">    </span>// 1) Supabase-Zugangsdaten (Anführungszeichen nicht vergessen)</p>
 <p class="p1"><span class="Apple-converted-space">    </span>const SUPABASE_URL <span class="Apple-converted-space">    </span>= "https://owrfgjypnemsxonmbrpj.supabase.co";</p>
-<p class="p1"><span class="Apple-converted-space">    </span>const SUPABASE_ANON_KEY = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im93cmZnanlwbmVtc3hvbm1icnBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDczMTUyOTgsImV4cCI6MjA2Mjg5MTI5OH0.X1PymyDZqNe_Plmao8U6gdqFKP70VrFtuZTesgyZMwg"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpZVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im93cmZnanlwbmVtc3hvbmJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDczMTUyOTgsImV4cCI6MjA2Mjg5MTI5OH0.X1PymyDZqNe_Plmao8U6gdqFKP70VrFtuZTesgyZMwg";</p>
-<p class="p1"><span class="Apple-converted-space">    </span>const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);</p>
+<p class="p1"><span class="Apple-converted-space">    </span>const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im93cmZnanlwbmVtc3hvbm1icnBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDczMTUyOTgsImV4cCI6MjA2Mjg5MTI5OH0.X1PymyDZqNe_Plmao8U6gdqFKP70VrFtuZTesgyZMwg";</p>
+<p class="p1"><span class="Apple-converted-space">    </span>// Erstelle Supabase-Client (global verfügbar über window.supabase)</p>
+<p class="p1"><span class="Apple-converted-space">    </span>const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);</p>
 <p class="p2"><br></p>
 <p class="p1"><span class="Apple-converted-space">    </span>const container = document.getElementById("container");</p>
 <p class="p1"><span class="Apple-converted-space">    </span>const adminMenu = document.getElementById("adminMenu");</p>
@@ -66,7 +68,7 @@
 <p class="p2"><br></p>
 <p class="p1"><span class="Apple-converted-space">    </span>// 2) Daten laden, sortieren und anzeigen</p>
 <p class="p1"><span class="Apple-converted-space">    </span>async function loadFelle() {</p>
-<p class="p1"><span class="Apple-converted-space">      </span>const { data, error } = await supabase</p>
+<p class="p1"><span class="Apple-converted-space">      </span>const { data, error } = await supabaseClient</p>
 <p class="p1"><span class="Apple-converted-space">        </span>.from("felle")</p>
 <p class="p1"><span class="Apple-converted-space">        </span>.select("*");</p>
 <p class="p2"><br></p>
@@ -120,9 +122,9 @@
 <p class="p2"><br></p>
 <p class="p1"><span class="Apple-converted-space">    </span>// 4) Bestand aktualisieren</p>
 <p class="p1"><span class="Apple-converted-space">    </span>async function updateBestand(id, delta) {</p>
-<p class="p1"><span class="Apple-converted-space">      </span>const { error } = await supabase</p>
+<p class="p1"><span class="Apple-converted-space">      </span>const { error } = await supabaseClient</p>
 <p class="p1"><span class="Apple-converted-space">        </span>.from("felle")</p>
-<p class="p1"><span class="Apple-converted-space">        </span>.update({ bestand: supabase.raw("bestand + ?", [delta]) })</p>
+<p class="p1"><span class="Apple-converted-space">        </span>.update({ bestand: supabaseClient.raw("bestand + ?", [delta]) })</p>
 <p class="p1"><span class="Apple-converted-space">        </span>.eq("id", id);</p>
 <p class="p1"><span class="Apple-converted-space">      </span>if (error) {</p>
 <p class="p1"><span class="Apple-converted-space">        </span>console.error("Update-Fehler:", error);</p>
@@ -198,7 +200,7 @@
 <p class="p1"><span class="Apple-converted-space">          </span>const id = cols[idIdx];</p>
 <p class="p1"><span class="Apple-converted-space">          </span>const bestand = parseInt(cols[bestandIdx], 10);</p>
 <p class="p1"><span class="Apple-converted-space">          </span>if (!id) continue;</p>
-<p class="p1"><span class="Apple-converted-space">          </span>await supabase</p>
+<p class="p1"><span class="Apple-converted-space">          </span>await supabaseClient</p>
 <p class="p1"><span class="Apple-converted-space">            </span>.from("felle")</p>
 <p class="p1"><span class="Apple-converted-space">            </span>.update({ bestand })</p>
 <p class="p1"><span class="Apple-converted-space">            </span>.eq("id", id);</p>
